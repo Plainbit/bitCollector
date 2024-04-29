@@ -2,6 +2,23 @@
 # PLAINBIT - bitCollector for Linux
 # Version: 1.0.0
 ###############################################################################################################
+function echo_logo { 
+  echo -e "\e[94m+=======================================================================+\e[0m"
+  echo -e "\e[94m|                                                                       |\e[0m"
+  echo -e "\e[94m|  _     _ _    ____      _ _           _                __             |\e[0m"
+  echo -e "\e[94m| | |__ (_) |_ / ___|___ | | | ___  ___| |_ ___  _ __   / _| ___  _ __  |\e[0m"
+  echo -e "\e[94m| | '_ \| | __| |   / _ \| | |/ _ \/ __| __/ _ \| '__| | |_ / _ \| '__| |\e[0m"
+  echo -e "\e[94m| | |_) | | |_| |__| (_) | | |  __/ (__| || (_) | |    |  _| (_) | |    |\e[0m"
+  echo -e "\e[94m| |_.__/|_|\__|\____\___/|_|_|\___|\___|\__\___/|_|    |_|  \___/|_|    |\e[0m"
+  echo -e "\e[94m| | |   (_)_ __  _   ___  __                                            |\e[0m"
+  echo -e "\e[94m| | |   | | '_ \| | | \ \/ /                                            |\e[0m"
+  echo -e "\e[94m| | |___| | | | | |_| |>  <                                             |\e[0m"
+  echo -e "\e[94m| |_____|_|_| |_|\__,_/_/\_\                                            |\e[0m"
+  echo -e "\e[94m|                                                                       |\e[0m"
+  echo -e "\e[94m+=======================================================================+\e[0m"
+  echo -e "\n"
+}
+###############################################################################################################
 #1. 전역 변수 정의
 ###############################################################################################################
 declare -a volatitleTasks
@@ -38,7 +55,6 @@ function ColorPrint {
     green)  colorCode="\033[1;32m" ;;
     *)      echo "$message"; return ;;
   esac
-
   echo -e "${colorCode}[$(date +'%Y-%m-%d %H:%M:%S')] $message\033[0m"
 }
 ###############################################################################################################
@@ -303,12 +319,19 @@ function command_exists() {
 # Usage : CollectCmd $command $destpath
 ###############################################################################################################
 function CollectCmd() {
-  RecordLog Info "Start CollectCmd for Collect $1"
-  
   # 명령어를 괄호로 묶인 부분 제거 없이 직접 실행
   local cmd="$1"
-  local destination="$2"
+  local dest="$2"
+  local final_dest=""
   local ret=0
+
+  # Destination이 "/none"으로 끝나는 경우의 처리
+  if [[ "$(basename "$dest")" == "none" ]]; then
+    dest="${dest%/none}"
+    final_dest="${dest}/${cmd}"
+  else
+    final_dest="$dest"
+  fi
 
   # 명령어의 첫 단어(실제 실행 파일)만을 사용하여 존재 여부 확인
   local firstCmd=$(echo $cmd | awk '{print $1}')
@@ -318,7 +341,7 @@ function CollectCmd() {
   fi
 
   # 명령어 실행 및 결과 리다이렉션
-  eval "$cmd" > "$destination" 2>/dev/null
+  eval "$cmd" > "$final_dest" 2>/dev/null
   ret=$?
   if [ $ret -ne 0 ]; then
     RecordLog Error "CollectCmd: Execution failed for command: $cmd."
@@ -326,7 +349,6 @@ function CollectCmd() {
     RecordLog Success "CollectCmd: Command $cmd collected successfully."
   fi
 
-  RecordLog Info "End CollectCmd"
   return $ret
 }
 ###############################################################################################################
@@ -338,7 +360,6 @@ function CollectCmd() {
 # Usage : CollectFile $srcpath $destpath
 ###############################################################################################################
 function CollectFile() {
-  RecordLog Info "Start CollectFile for Collect $1"
   local source_pattern="$1"
   local dest="$2"
   local ret=0
@@ -348,8 +369,6 @@ function CollectFile() {
   if [[ "$(basename "$dest")" == "none" ]]; then
     replace_none=true
     dest="${dest%/none}"
-  else
-    mkdir -p "$dest"
   fi
 
   # Wildcard patterns 대응
@@ -381,7 +400,6 @@ function CollectFile() {
     fi
   done
 
-  RecordLog Info "End CollectFile"
   return $ret
 }
 ###############################################################################################################
@@ -393,42 +411,55 @@ function CollectFile() {
 # Usage : CollectDir $srcpath $destpath
 ###############################################################################################################
 function CollectDir() {
-  local source="$1"
+  local source_pattern="$1"
   local dest="$2"
-  RecordLog Info "Start CollectDir for Collect $1"
+  local replace_none=false
 
-  # 목적지 경로 조정
-  if [[ "$dest" == */none ]]; then
-    dest="${dest%/none}/$(basename "$source")"
+  # Destination이 "/none"으로 끝나는 경우의 처리
+  if [[ "$(basename "$dest")" == "none" ]]; then
+    replace_none=true
+    dest="${dest%/none}"
   fi
 
-  # 목적지 디렉터리가 존재하는지 확인 및 생성
-  mkdir -p "$dest"
+  # Wildcard patterns 대응
+  shopt -s nullglob
+  local dirs_matched=($source_pattern)
+  shopt -u nullglob
 
-  # 소스가 디렉터리인지 확인
-  if [[ -d "$source" ]]; then
-    # rsync 명령어가 있는 경우
-    # if command -v rsync >/dev/null; then
-    #   rsync -avh --progress "$source/" "$dest" --exclude ".git" 2>&1 | while read line; do
-    #     echo $line
-    #   done
-    # else
-      # rsync가 없는 경우 cp 명령어를 사용
-      cp -r --preserve=all "$source" "$dest" 2>/dev/null
-      if [ $? -eq 0 ]; then
-        RecordLog Success "CollectDir: $source is collected successfully using cp."
+  for source in "${dirs_matched[@]}"; do
+    if [[ -d "$source" ]]; then
+      local final_dest=""
+
+      # "/none"을 대체하는 로직
+      if [[ "$replace_none" == true ]]; then
+        final_dest="${dest}/$(dirname "${source#/home/}")"
+        mkdir -p "$final_dest"
       else
-        RecordLog Error "CollectDir: An error occurred while collecting $source using cp."
-        return 1
+        final_dest="$dest"
       fi
-    # fi
-    ret=${PIPESTATUS[0]} # rsync 또는 cp 명령의 종료 코드를 가져옵니다.
-  else
-    RecordLog Error "CollectDir: $source Directory not found."
-    return 0 # 에러 없음으로 처리
-  fi
-  RecordLog Info "End CollectDir"
-  return $ret
+
+      # rsync가 있는 경우와 없는 경우를 구분하여 처리
+      # if command -v rsync >/dev/null; then
+      #   rsync -avh --progress "$source/" "$final_dest" --exclude ".git" 2>&1 | while read line; do
+      #     echo $line
+      #   done
+      #   RecordLog Success "CollectDir: $source is collected successfully using rsync."
+      # else
+        cp -r --preserve=all "$source" "$final_dest" 2>/dev/null
+        if [ $? -eq 0 ]; then
+          RecordLog Success "CollectDir: $source is collected successfully using cp."
+        else
+          RecordLog Error "CollectDir: An error occurred while collecting $source using cp."
+          return 1
+        fi
+      # fi
+    else
+      RecordLog Error "CollectDir: Directory $source not found."
+      return 0 # 에러 없음으로 처리
+    fi
+  done
+
+  return 0 # 모든 디렉터리 처리 후 성공
 }
 ###############################################################################################################
 #9.5 프로세스 데이터 수집
@@ -436,21 +467,21 @@ function CollectDir() {
 # 악성 프로세스 식별 및 분석 용도
 # /proc/{exe}/ Data collection
 # For malicious process identification and analysis purposes
-# Usage : CollectProc $destpath
 ###############################################################################################################
 function CollectProc() {
-    local dest="$1"
-    local lastDir=$(basename "$dest")
-    RecordLog Info "Start CollectProc"
+    local source="$1"
+    local dest="$2"
+    local final_dest=""
 
-    if [ "$lastDir" == "none" ]; then
-        dest=$(dirname "$dest")
+    # Destination이 "/none"으로 끝나는 경우의 처리
+    if [[ "$(basename "$dest")" == "none" ]]; then
+      final_dest="${dest%/none}/$(source)"
     else
-        mkdir -p "$dest"
+      final_dest="$dest"
     fi
 
     # 필요한 도구가 있는지 확인
-    if ! command_exists stat || ! command_exists readlink; then
+    if ! command -v stat &>/dev/null || ! command -v readlink &>/dev/null; then
         RecordLog Error "CollectProc: Required commands (stat or readlink) not found."
         return 1
     fi
@@ -466,12 +497,11 @@ function CollectProc() {
     done < <(ps -e -o pid=)
 
     # 중복을 제거하고 결과를 파일에 저장
-    printf "%s\n" "${exec_files[@]}" | sort | uniq | tar -P -zcf "${dest}/process.tar.gz" -T - && \
-    RecordLog Success "CollectProc: Compression of ${dest}/process.tar.gz was successfully." || \
-    RecordLog Error "CollectProc: An error occurred in ${dest}/process.tar.gz compression."
-
-    RecordLog Info "End CollectProc"
+    printf "%s\n" "${exec_files[@]}" | sort | uniq | tar -P -zcf "${final_dest}.tar.gz" -T - && \
+    RecordLog Success "CollectProc: Compression of ${final_dest} was successfully." || \
+    RecordLog Error "CollectProc: An error occurred in ${final_dest} compression."
 }
+
 ###############################################################################################################
 #9.6 데이터 수집 함수
 # config.ini 데이터를 읽어 알맞는 함수에 인자 전달
@@ -513,16 +543,24 @@ function CollectData() {
       PrintProgressBar $(( (index * 100) / ${#all_tasks[@]} )) "${components[0]} data collection through ${data}"
       case $action in
           cmd)
+              RecordLog Info "Start CollectCmd for $data"
               CollectCmd "$data" "$destPath"
+              RecordLog Info "End CollectCmd"
               ;;
           file)
+              RecordLog Info "Start CollectFile for $data"
               CollectFile "$data" "$destPath"
+              RecordLog Info "End CollectFile"
               ;;
           dir)
+              RecordLog Info "Start CollectDir for $data"
               CollectDir "$data" "$destPath"
+              RecordLog Info "End CollectDir"
               ;;
           function)
-              $data "$destPath"
+              RecordLog Info "Start UserFunction for $data"
+              $data "$data" "$destPath"
+              RecordLog Info "End $data"
               ;;
           *)
               ;;
@@ -542,8 +580,7 @@ function CollectData() {
 # If there is no zip command, use the tar command to compress without password
 # Usage : CompData
 ###############################################################################################################
-function CompData() 
-{
+function CompData() {
   # $1(password check result)
   RecordLog Info "Start CompData"
   ColorPrint blue "Compressing Collected Informations."
@@ -555,21 +592,26 @@ function CompData()
         ColorPrint blue "Compression is successfully."
         ColorPrint blue "Compression Integrity Checking..."
         OUTPUT=$(unzip -tP "$compPassword" "$resultFile.zip" 2>&1)
-          # 압축파일 무결성 검사
-          if echo "$OUTPUT" | grep -q "No errors detected"; then
-              ColorPrint blue "Compression Integrity check is Successfully."
-              RecordLog Success "CompData: Compression Integrity check is Successfully."
-              zip -r -P "$compPassword" "$resultFile.zip" "$collectLog" 2>/dev/null
-          else
-              ColorPrint red "Integrity check error : $OUTPUT" | grep "error:"  # 오류가 발생한 파일을 출력합니다.
-              RecordLog Error "CompData: The integrity check of the $OUTPUT file failed."
-          fi
+        # 압축파일 무결성 검사
+        if echo "$OUTPUT" | grep -q "No errors detected"; then
+            ColorPrint blue "Compression Integrity check is Successfully."
+            RecordLog Success "CompData: Compression Integrity check is Successfully."
+            zip -r -P "$compPassword" "$resultFile.zip" "$collectLog" 2>/dev/null
+            SHA256=$(sha256sum "$resultFile.zip" | cut -d ' ' -f1)
+            ColorPrint blue "SHA256: $SHA256"
+            RecordLog Info "SHA256 of compressed file: $SHA256"
         else
-          # CollectDir error ($source not exist)
-      
-          tar -zcf "$resultFile.tar.gz" "./$storePath" "$collectLog" 2>/dev/null
-          ColorPrint blue "Compression was successfully."
+            ColorPrint red "Integrity check error : $OUTPUT" | grep "error:"  # 오류가 발생한 파일을 출력합니다.
+            RecordLog Error "CompData: The integrity check of the $OUTPUT file failed."
         fi
+      else
+        # CollectDir error ($source not exist)
+        tar -zcf "$resultFile.tar.gz" "./$storePath" "$collectLog" 2>/dev/null
+        ColorPrint blue "Compression was successfully."
+        SHA256=$(sha256sum "$resultFile.tar.gz" | cut -d ' ' -f1)
+        ColorPrint blue "SHA256: $SHA256"
+        RecordLog Info "SHA256 of compressed file: $SHA256"
+      fi
       ;;
     255) # User pressed escape
       ColorPrint red "No Compression."
@@ -581,6 +623,7 @@ function CompData()
   esac
   RecordLog Info "End CompData"
 }
+
 ###############################################################################################################
 #11. 환경 초기화 함수
 # 수집 폴더 및 전역 변수 메모리 할당 해제
@@ -642,6 +685,7 @@ function PrintProgressBar() {
   fi
   text="${progress_bar} ($Param_Progress%) $Phase \r"
   # green
+  echo_logo
   echo -ne "\033[1;32m${text}\033[0m"
   sleep 0.2
 
@@ -676,20 +720,7 @@ function CheckBash() {
 ###############################################################################################################
 function main()
 {
-  echo -e "\e[94m+=======================================================================+\e[0m"
-  echo -e "\e[94m|                                                                       |\e[0m"
-  echo -e "\e[94m|  _     _ _    ____      _ _           _                __             |\e[0m"
-  echo -e "\e[94m| | |__ (_) |_ / ___|___ | | | ___  ___| |_ ___  _ __   / _| ___  _ __  |\e[0m"
-  echo -e "\e[94m| | '_ \| | __| |   / _ \| | |/ _ \/ __| __/ _ \| '__| | |_ / _ \| '__| |\e[0m"
-  echo -e "\e[94m| | |_) | | |_| |__| (_) | | |  __/ (__| || (_) | |    |  _| (_) | |    |\e[0m"
-  echo -e "\e[94m| |_.__/|_|\__|\____\___/|_|_|\___|\___|\__\___/|_|    |_|  \___/|_|    |\e[0m"
-  echo -e "\e[94m| | |   (_)_ __  _   ___  __                                            |\e[0m"
-  echo -e "\e[94m| | |   | | '_ \| | | \ \/ /                                            |\e[0m"
-  echo -e "\e[94m| | |___| | | | | |_| |>  <                                             |\e[0m"
-  echo -e "\e[94m| |_____|_|_| |_|\__,_/_/\_\                                            |\e[0m"
-  echo -e "\e[94m|                                                                       |\e[0m"
-  echo -e "\e[94m+=======================================================================+\e[0m"
-  echo -e "\n"
+  echo_logo
   # Ctrl+c, Ctrl+z, Ctrl+\ 사용 제한
   #trap '' SIGINT SIGTSTP SIGQUIT
   local messages=""
