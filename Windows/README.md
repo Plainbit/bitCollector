@@ -10,7 +10,7 @@
 </div>
 
 ## Release
-Current Version is [Bitcollector](https://github.com/Plainbit/BitCollector/releases)
+Current Version is [Bitcollector](https://github.com/Plainbit/bitColletor/releases)
 
 
 ## Bitcollector
