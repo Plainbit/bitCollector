@@ -1,4 +1,4 @@
-# PLAINBIT Collector: BitCollector
+# PLAINBIT: bitCollector for Windows
 <div align="center">
 	<img src="https://github.com/Plainbit/bitColletor/blob/main/img/Logo.png" />
 </div>
@@ -10,12 +10,12 @@
 </div>
 
 ## Release
-Current Version is [Bitcollector](https://github.com/Plainbit/bitColletor/releases)
+Current Version is [bitCollector for Windows](https://github.com/Plainbit/bitColletor/releases)
 
 
-## Bitcollector
+## bitCollector for Windows
 
-### Bitcollector Feature
+### bitCollector for Windows Feature
 1. 아티팩트 선택적 수집
 2. Full Path / Category Path 수집 방식 지원
 3. Zip / VHDX 압축
@@ -64,7 +64,7 @@ Process:
 ```
 
 #### 아티팩트의 수집 순서
-Bitcollector에서는 각 아티팩트 별로 수집 순서를 정해 최대한 대상 PC를 원본 상태를 유지해서 수집합니다.
+bitCollector for Windows에서는 각 아티팩트 별로 수집 순서를 정해 최대한 대상 PC를 원본 상태를 유지해서 수집합니다.
 1. Prefetch
 2. Application Compatibility (Recentfilecache.bcf and Amcache.hve)
 3. Registry
@@ -87,12 +87,12 @@ Bitcollector에서는 각 아티팩트 별로 수집 순서를 정해 최대한 
 20. SRUM
 21. Memory Files (hiberfil.sys 등)
 
-### Bitcollector: Command
+### bitCollector for Windows: Command
 ```bash
-Bitcollector.exe -h
+bitCollector.exe -h
 
 Usage:
-   BitCollector.exe [options]
+   bitCollector.exe [options]
 
 Options:
   -l, --list        - Show artifact list
@@ -110,15 +110,15 @@ Options:
 Press enter to continue!
 ```
 
-### Bitcollector: GUI
+### bitCollector for Windows: GUI
 <p align="center">
-  <img width="70%" height="70%" src="img/Bitcollector-gui.png">
+  <img width="70%" height="70%" src="https://github.com/Plainbit/bitColletor/blob/main/img/Bitcollector-gui.png">
 </p>
 
 ### 다른 수집 도구 비교
 |         **프로그램 이름**        | **수집 속도** | **아티팩트 커스텀** |      **수집 결과**     |  **지원 OS**  | **VSC 수집** | **설정 파일** | **ADS 영역 수집** | **파일 해시** |
 |:--------------------------------:|:-------------:|:-------------------:|:----------------------:|:-------------:|:------------:|:-------------:|:-----------------:|:-------------:|
-|         **Bitcollector**         |               |          O          |    Raw / ZIP / VHDX    |   Windos XP+  |       O      |      Yaml     |         O         |       O       |
+|         **bitCollector**         |               |          O          |    Raw / ZIP / VHDX    |   Windos XP+  |       O      |      Yaml     |         O         |       O       |
 |             **KAPE**             |               |          O          | Raw / ZIP / VHDX / VHD |   Windows 7+  |       O      |     tkape     |         O         |       O       |
 |      **Artifact Collector**      |               |          O          | froensicstore (SQLite) | Windows 2000+ |       X      |      yaml     |         X         |       O       |
 | **Cyber Triage Collection Tool** |               |          X          |           gz           |  Windows XP+  |       X      |       X       |         X         |       O       |
@@ -126,7 +126,7 @@ Press enter to continue!
 
 
 ## How to Build
-BitCollector는 Visual Studio 2015 (msvc140_xp 필요)로 x86 빌드
+bitCollector는 Visual Studio 2015 (msvc140_xp 필요)로 x86 빌드
 > Visual Studio 2015가 없을 시, **Jetbrains Rider** 대체 가능
 
 1. .sln 파일을 VS2015나 Rider로 빌드
