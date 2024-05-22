@@ -1,93 +1,56 @@
-# PLAINBIT: bitCollector for Windows
 <div align="center">
-	<img src="https://github.com/Plainbit/bitColletor/blob/main/img/Logo.png" />
+    <img src="https://github.com/Plainbit/bitColletor/raw/main/img/Logo.png" />
 </div>
 
 <div align="center">
-    <img src="https://img.shields.io/badge/Windows-0078D4?style=for-the-badge&logo=Windows" />
-    <img src="https://img.shields.io/badge/Visual_Studio-2015-purple?style=for-the-badge&logo=VisualStudio" />
-    <img src="https://img.shields.io/badge/CPP-blue?style=for-the-badge&logo=cplusplus&labelColor=006199" />
+    <img src="https://img.shields.io/badge/Windows-0078D4?style=flat&logo=Windows" />
+    <img src="https://img.shields.io/badge/Visual_Studio-2015-purple?style=flat&logo=VisualStudio" />
+    <img src="https://img.shields.io/badge/CPP-blue?style=flat&logo=cplusplus&labelColor=006199" />
 </div>
 
-## Release
-Current Version is [bitCollector for Windows](https://github.com/Plainbit/bitColletor/releases)
+# bitCollector for Windows DFIR Toolkit
 
+bitCollector for Windows is a detailed artifact collection tool crafted for digital forensics and incident response on Windows systems. It enables forensic analysts and security professionals to selectively collect vital system artifacts and configurations, aiding in comprehensive investigations and analyses.
 
-## bitCollector for Windows
+### bitCollector for Windows: GUI
+<p align="center">
+  <img width="70%" height="70%" src="https://github.com/Plainbit/bitColletor/raw/main/img/Bitcollector-gui.png">
+</p>
 
-### bitCollector for Windows Feature
-1. 아티팩트 선택적 수집
-2. Full Path / Category Path 수집 방식 지원
-3. Zip / VHDX 압축
-4. VSC 수집 및 중복 제거 삭제 기능
-5. 아티팩트 파일을 자유롭게 수정하여 원하는 아티팩트 수집
+## Features
 
-### Artifacts
-```artifacts``` 폴더에 아티팩트 yaml 파일을 기반으로 파일 수집합니다.\
-yaml 파일의 이름 구조는 <수집순서>-<아티팩트이름>.yaml 입니다.\
-아티팩트 이름에서 띄어쓰기는 "-"로 구분합니다.
+- **Selective Artifact Collection**: Allows specific artifact collection based on user-defined parameters.
+- **Flexible Path Collection**: Supports both full path and category path collection methodologies.
+- **Comprehensive Compression Options**: Provides data compression in ZIP or VHDX formats.
+- **Volume Shadow Copy Collection and Deduplication**: Offers Volume Shadow Copy collection with options for deduplication to remove duplicate items.
+- **Artifact Customization**: Users can modify artifact definitions to tailor collection processes to specific needs.
 
-#### yaml 예시 1
-```yaml
-# 01-Prefetch.yaml
-Artifact: Prefetch
-Description: Artifacts of execution files
-Category: Windows
-Default: false
-Target:
-  -
-    Name: Prefetch
-    Path: C:\Windows\prefetch\
-    File: "*.pf"
-    IsRecursive: false
-  -
-    Name: Prefetch (old)
-    Path: C:\Windows.old\Windows\prefetch\
-    File: "*.pf"
-    IsRecursive: false
+## Prerequisites
 
-```
+- Windows Operating System, XP or newer
+- Visual Studio 2015 for building
+- Administrative privileges for full artifact collection
 
-#### yaml 예시 2
-```yaml
-# 07-User-Account.yaml
-Artifact: User account
-Description: User account details
-Category: Live
-Default: true
-Process:
-  -
-    Name: user account
-    Path: C:\Windows\System32\cmd.exe
-    Command: /c net user
-    SaveAs: net_user.txt
-```
+## Usage
 
-#### 아티팩트의 수집 순서
-bitCollector for Windows에서는 각 아티팩트 별로 수집 순서를 정해 최대한 대상 PC를 원본 상태를 유지해서 수집합니다.
-1. Prefetch
-2. Application Compatibility (Recentfilecache.bcf and Amcache.hve)
-3. Registry
-4. Syscache
-5. Live 데이터 (netstat 등)
-6. NTFS 파일 시스템
-7. Event Log
-8. Recent Files (lnk 파일)
-9. Jumplist
-10. SUM
-11. Windows Notification / Defender / Search / Startup / Tasks / Timeline / Setup
-12. System Config
-13. BITS
-14. Powershell
-15. Recycle Bin
-16. Thumbnail Cache
-17. Internet Explorer
-18. Web Browser (Chrome, Firefox)
-19. WER
-20. SRUM
-21. Memory Files (hiberfil.sys 등)
+### 1. Download the Collector
+- Clone the repository or download the latest release from the GitHub repository to your Windows machine.
 
-### bitCollector for Windows: Command
+    ```bash
+    git clone https://github.com/Plainbit/bitCollector.git
+    cd bitCollector/Windows
+    ```
+
+### 2. Build with Visual Studio
+- Open the solution file in Visual Studio 2015 and build the project.
+  - bitCollector builds x86 with Visual Studio 2015 (requires msvc140_xp)
+    - **If you do not have Visual Studio 2015, Jetbrains Rider can be substituted.**
+
+- **Build the .sln file with VS2015 or Rider and add the DLL files in the “artifacts” folder and “lib” folder to the “Debug” folder.**
+
+### 3. Execute the Collector
+- Navigate to the compiled output directory and run the executable with desired options.
+
 ```bash
 bitCollector.exe -h
 
@@ -110,24 +73,57 @@ Options:
 Press enter to continue!
 ```
 
-### bitCollector for Windows: GUI
-<p align="center">
-  <img width="70%" height="70%" src="https://github.com/Plainbit/bitColletor/blob/main/img/Bitcollector-gui.png">
-</p>
+### 4. Check the Output
+-  After the collection process completes, check the specified output directory for the collected data.
 
-### 다른 수집 도구 비교
-|         **프로그램 이름**        | **수집 속도** | **아티팩트 커스텀** |      **수집 결과**     |  **지원 OS**  | **VSC 수집** | **설정 파일** | **ADS 영역 수집** | **파일 해시** |
-|:--------------------------------:|:-------------:|:-------------------:|:----------------------:|:-------------:|:------------:|:-------------:|:-----------------:|:-------------:|
-|         **bitCollector**         |               |          O          |    Raw / ZIP / VHDX    |   Windos XP+  |       O      |      Yaml     |         O         |       O       |
-|             **KAPE**             |               |          O          | Raw / ZIP / VHDX / VHD |   Windows 7+  |       O      |     tkape     |         O         |       O       |
-|      **Artifact Collector**      |               |          O          | froensicstore (SQLite) | Windows 2000+ |       X      |      yaml     |         X         |       O       |
-| **Cyber Triage Collection Tool** |               |          X          |           gz           |  Windows XP+  |       X      |       X       |         X         |       O       |
-|        **Magnet RESPONSE**       |               |          X          |       Zip & zdmp       |   Windows 7+  |       X      |       X       |         X         |       X       |
+## Configuration
 
+The Windows DFIR Toolkit uses YAML configuration files for defining artifacts to be collected. These files are located in the `artifacts` directory and can be edited to match specific collection requirements.
 
-## How to Build
-bitCollector는 Visual Studio 2015 (msvc140_xp 필요)로 x86 빌드
-> Visual Studio 2015가 없을 시, **Jetbrains Rider** 대체 가능
+### Example YAML Configuration
 
-1. .sln 파일을 VS2015나 Rider로 빌드
-2. "Debug" 폴더에 "artifacts" 폴더와 "lib" 폴더 내 DLL 파일들을 추가
+```yaml
+# 01-Prefetch.yaml
+Artifact: Prefetch
+Description: Artifacts of execution files
+Category: Windows
+Default: false
+Target:
+  -
+    Name: Prefetch
+    Path: C:\Windows\prefetch\
+    File: "*.pf"
+    IsRecursive: false
+```
+
+#### Collection order of artifacts
+- bitCollector for Windows determines the collection order for each artifact and collects the target PC while maintaining its original state as much as possible.
+```
+1. Prefetch
+2. Application Compatibility (Recentfilecache.bcf and Amcache.hve)
+3. Registry
+4.Syscache
+5. Live data (netstat, etc.)
+6. NTFS file system
+7.Event Log
+8. Recent Files (lnk files)
+9.Jumplist
+10.SUM
+11. Windows Notification / Defender / Search / Startup / Tasks / Timeline / Setup
+12. System Config
+13.BITS
+14. Powershell
+15. Recycle Bin
+16. Thumbnail Cache
+17. Internet Explorer
+18. Web Browser (Chrome, Firefox)
+19.WER
+20. SRUM
+21. Memory Files (hiberfil.sys, etc.)
+```
+
+## Contributing
+
+Contributions to the bitCollector for Windows are welcome. Please submit pull requests or issues through GitHub to propose changes or enhancements.
+
+---
