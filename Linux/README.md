@@ -1,5 +1,5 @@
 <div align="center">
-	<img src="https://github.com/Plainbit/bitColletor/blob/main/img/Logo.png" />
+	<img src="https://github.com/Plainbit/bitColletor/raw/main/img/Logo.png" />
 </div>
 
 <div align="center">
