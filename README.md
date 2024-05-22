@@ -1,5 +1,5 @@
 <div align="center">
-	<img src="https://github.com/Plainbit/bitColletor/blob/main/img/Logo.png" />
+	<img src="https://github.com/Plainbit/bitColletor/raw/main/img/Logo.png" />
 </div>
 
 <div align="center">
@@ -18,7 +18,7 @@ BITCollector is a comprehensive collection tool designed for digital forensics a
 ## Features
 The bitCollector offers the following features
 
-- ️🖥️ Runs on 🖼️ Windows, 🐧 Linux
+- ️🎯 Runs on 🪟 Windows, 🐧 Linux
 - 🛍️ Collection via files, directories, commands, and user-created functions
 - 🕊️ It's open source
 - 🆓 Free for everyone
