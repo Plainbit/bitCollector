@@ -11,7 +11,7 @@
     <img src="https://img.shields.io/badge/CPP-blue?style=for-the-badge&logo=cplusplus&labelColor=006199" />
 </div>
 
-# bitCollector - DFIR (Digital Forensics and Incident Response) Toolkit
+# bitCollector - DFIR Triage Collector
 
 BITCollector is a comprehensive collection tool designed for digital forensics and incident response activities on Linux and Windows systems. It allows forensic analysts and security professionals to collect a wide array of system artifacts and logs, aiding in the investigation and analysis of security incidents.
 
