@@ -8,7 +8,7 @@
 	<img src="https://img.shields.io/badge/visualstudiocode-007ACC?style=flat&logo=visualstudiocode&logoColor=white" />
 </div>
 
-# bitCollector for Linux DFIR Toolkit
+# bitCollector for Linux DFIR Triage Collector
 
 bitCollector for Linux  is a comprehensive collection tool designed for digital forensics and incident response activities on Linux systems. It allows forensic analysts and security professionals to collect a wide array of system artifacts and logs, aiding in the investigation and analysis of security incidents.
 
@@ -27,7 +27,7 @@ bitCollector for Linux  is a comprehensive collection tool designed for digital 
 
 ## Usage
 
-1. **Download the Toolkit**: Clone the repository or download the toolkit files to your Linux system.
+1. **Download the Triage Collector**: Clone the repository or download the Triage Collector files to your Linux system.
 
     ```bash
     git clone https://github.com/Plainbit/bitCollector.git
@@ -40,7 +40,7 @@ bitCollector for Linux  is a comprehensive collection tool designed for digital 
     chmod +x bitCollector.sh
     ```
 
-3. **Execute the Toolkit**: Run the main script. You will be prompted to select the type of collection you wish to perform.
+3. **Execute the Triage Collector**: Run the main script. You will be prompted to select the type of collection you wish to perform.
 
     ```bash
     sudo ./bitCollector.sh
@@ -57,7 +57,7 @@ bitCollector for Linux  is a comprehensive collection tool designed for digital 
 
 ## Configuration
 
-The Linux DFIR Toolkit is highly customizable through its configuration files, allowing users to tailor the data collection process to their specific needs. The toolkit supports two primary types of configuration files: `systemOS.ini` for system artifacts and `3rdParty.ini` for third-party application logs. Here, we focus on the structure and customization of the `systemOS.ini` file, exemplified with a configuration tailored for Raspbian OS.
+The Linux DFIR Triage Collector is highly customizable through its configuration files, allowing users to tailor the data collection process to their specific needs. The Triage Collector supports two primary types of configuration files: `systemOS.ini` for system artifacts and `3rdParty.ini` for third-party application logs. Here, we focus on the structure and customization of the `systemOS.ini` file, exemplified with a configuration tailored for Raspbian OS.
 
 ### Configuration File Structure
 
