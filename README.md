@@ -13,7 +13,7 @@
 
 # bitCollector - DFIR Triage Collector
 
-BITCollector is a comprehensive collection tool designed for digital forensics and incident response activities on Linux and Windows systems. It allows forensic analysts and security professionals to collect a wide array of system artifacts and logs, aiding in the investigation and analysis of security incidents.
+bitCollector is a comprehensive collection tool designed for digital forensics and incident response activities on Linux and Windows systems. It allows forensic analysts and security professionals to collect a wide array of system artifacts and logs, aiding in the investigation and analysis of security incidents.
 
 ## Features
 The bitCollector offers the following features
