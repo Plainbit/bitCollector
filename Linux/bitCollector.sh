@@ -1,28 +1,16 @@
-#!/bin/bash
-# PLAINBIT - bitCollector for Linux
-# Version: 1.0.0
+#!/bin/sh
 ###############################################################################################################
-function echo_logo { 
-  echo -e "\e[94m+=======================================================================+\e[0m"
-  echo -e "\e[94m|                                                                       |\e[0m"
-  echo -e "\e[94m|  _     _ _    ____      _ _           _                __             |\e[0m"
-  echo -e "\e[94m| | |__ (_) |_ / ___|___ | | | ___  ___| |_ ___  _ __   / _| ___  _ __  |\e[0m"
-  echo -e "\e[94m| | '_ \| | __| |   / _ \| | |/ _ \/ __| __/ _ \| '__| | |_ / _ \| '__| |\e[0m"
-  echo -e "\e[94m| | |_) | | |_| |__| (_) | | |  __/ (__| || (_) | |    |  _| (_) | |    |\e[0m"
-  echo -e "\e[94m| |_.__/|_|\__|\____\___/|_|_|\___|\___|\__\___/|_|    |_|  \___/|_|    |\e[0m"
-  echo -e "\e[94m| | |   (_)_ __  _   ___  __                                            |\e[0m"
-  echo -e "\e[94m| | |   | | '_ \| | | \ \/ /                                            |\e[0m"
-  echo -e "\e[94m| | |___| | | | | |_| |>  <                                             |\e[0m"
-  echo -e "\e[94m| |_____|_|_| |_|\__,_/_/\_\                                            |\e[0m"
-  echo -e "\e[94m|                                                                       |\e[0m"
-  echo -e "\e[94m+=======================================================================+\e[0m"
-  echo -e "\n"
-}
+# BitCollector v2.0
 ###############################################################################################################
-#1. 전역 변수 정의
-###############################################################################################################
-declare -a volatitleTasks
-declare -a nonVolatitleTasks
+
+#==============================================================================================================
+# 셸 스크립트 기본 설정
+#==============================================================================================================
+set -u
+
+#==============================================================================================================
+# 1. 전역 변수 정의
+#==============================================================================================================
 compPassword=""
 systemOS=""
 systemVersion=""
@@ -30,804 +18,667 @@ systemHostName=""
 systemHostIp=""
 systemHostMac=""
 storePath="Result"
-collectLog="collect.log"
+collectLog="Collect.log"
 systemDate=""
 resultFile=""
-collectSize="0"
-availableSize="0"
-###############################################################################################################
-#2. 출력 함수
-# 색상을 가진 메세지 출력을 위한 함수
-# Function for outputting colored messages
-# Usage: ColorPrint $color $text
-###############################################################################################################
-function ColorPrint {
-  local color="$1"
-  local message="$2"
+Ignore_echo=0
+volatitleTasks=""
+nonVolatitleTasks=""
+success_count=0
+warning_count=0
+error_count=0
+tmpDir=""
 
-  if [[ $Ignore_echo -eq 1 ]]; then return; fi
+###############################################################################################################
+# 로고 출력 함수 / Logo Display Function
+###############################################################################################################
+echo_logo() { 
+  printf "\033[94m+=======================================================================+\033[0m\n"
+  printf "\033[94m|                                                                       |\033[0m\n"
+  printf "\033[94m|           _     _ _    ____      _ _           _                      |\033[0m\n"
+  printf "\033[94m|          | |__ (_) |_ / ___|___ | | | ___  ___| |_ ___  _ __          |\033[0m\n"
+  printf "\033[94m|          | '_ \| | __| |   / _ \| | |/ _ \/ __| __/ _ \| '__|         |\033[0m\n"
+  printf "\033[94m|          | |_) | | |_| |__| (_) | | |  __/ (__| || (_) | |            |\033[0m\n"
+  printf "\033[94m|          |_.__/|_|\__|\____\___/|_|_|\___|\___|\__\___/|_|            |\033[0m\n"
+  printf "\033[94m|                      | | |   (_)_ __  _   ___  __                     |\033[0m\n"
+  printf "\033[94m|                      | | |   | | '_ \| | | \ \/ /                     |\033[0m\n"
+  printf "\033[94m|                      | | |___| | | | | |_| |>  <                      |\033[0m\n"
+  printf "\033[94m|                      | | ____|_|_| |_|\__,_/_/\_\                     |\033[0m\n"
+  printf "\033[94m|                                                                       |\033[0m\n"
+  printf "\033[94m|                                                                       |\033[0m\n"
+  printf "\033[94m|            A robust artifact collection tool by PLAINBIT              |\033[0m\n" 
+  printf "\033[94m+=======================================================================+\033[0m\n\n"
+}
 
-  local colorCode=""
-  case $color in
+###############################################################################################################
+# 2. 출력 및 로깅 함수 / Output and Logging Functions
+###############################################################################################################
+
+# 색상 메시지 출력 함수 / Colored Message Output Function
+ColorPrint() {
+  color="$1"
+  message="$2"
+  if [ "$Ignore_echo" -eq 1 ]; then return; fi
+  colorCode=""
+  case "$color" in
     red)    colorCode="\033[31m" ;;
     blue)   colorCode="\033[34m" ;;
     yellow) colorCode="\033[33m" ;;
     green)  colorCode="\033[1;32m" ;;
-    *)      echo "$message"; return ;;
+    *)      printf "%s\n" "$message"; return ;;
   esac
-  echo -e "${colorCode}[$(date +'%Y-%m-%d %H:%M:%S')] $message\033[0m"
+  printf "${colorCode}[%s] %s\033[0m\n" "$(date +'%Y-%m-%d %H:%M:%S')" "$message"
 }
-###############################################################################################################
-#3. 로깅 함수
-# 성공, 실패 관련 로그 기록을 위한 함수
-# Function for recording logs related to success and failure
-# Usage: RecordLog $status $text
-###############################################################################################################
-function RecordLog {
-  local status="$1"
-  local message="$2"
-  local logFile=""
 
-  # Bash 버전 3에서 대문자 변환을 제외
-  echo "[$(date +'%Y-%m-%d %H:%M:%S')] [$status] $message" >> "$collectLog"
+# 로그 기록 함수 / Log Recording Function
+RecordLog() {
+  status="$1"
+  message="$2"
+  printf "[%s] [%s] %s\n" "$(date +'%Y-%m-%d %H:%M:%S')" "$status" "$message" >> "$collectLog"
 }
+
 ###############################################################################################################
-#4. 실행 권한 확인
-# 원활한 수집 스크립트 동작을 위한 root 권한 확인
-# Check root permissions for smooth collection script operation
-# Usage : CheckPermission
+# 3. 환경 설정 및 검증 함수 / Environment Setup and Validation Functions
 ###############################################################################################################
-function CheckPermission {
-  if [[ $UID -ne 0 ]]; then
-    echo -ne '\n'
-    ColorPrint red "Should run as root."
-    echo -ne '\n'
-    RecordLog Error "CheckPermission: Root permission not confirmed."
+
+# 임시 디렉토리 정리 함수 / Temporary Directory Cleanup Function
+Cleanup() {
+  if [ -n "$tmpDir" ] && [ -d "$tmpDir" ]; then
+    rm -rf "$tmpDir"
+    RecordLog Info "Cleanup: Temporary directory '$tmpDir' removed."
+  fi
+}
+
+# 루트 권한 확인 함수 / Root Permission Check Function
+CheckPermission() {
+  if [ "$(id -u)" -ne 0 ]; then
+    ColorPrint red "This script must be run as root."
+    RecordLog Error "CheckPermission: Not running as root."
     exit 1
   fi
 }
-###############################################################################################################
-#5. 수집 대상 시스템 정보 수집
-# Collection of target system information
-# Usage: CheckOS
-###############################################################################################################
-function CheckOS {
-    # uname 및 hostname 명령의 존재 여부 확인
-    if ! command_exists uname; then
-        RecordLog Error "CheckOS: uname command not found."
-        return
+
+# 운영체제 정보 확인 함수 / Operating System Information Check Function
+CheckOS() {
+    if ! command -v uname >/dev/null 2>&1; then
+        RecordLog Error "CheckOS: 'uname' command not found."
+        ColorPrint red "Cannot determine OS because the required 'uname' command was not found."
+        exit 1
     fi
+    tmp=$(uname -a)
 
-    local tmp=$(uname -a)
-    local osVersionPattern='[0-9]+\.[0-9]+(\.[0-9]+)?(-[0-9]+)?'
-
-    # OS 명 파싱
-    if echo "$tmp" | grep -qiF "raspberry"; then
-        systemOS="Raspbian"
-        systemVersion=$(echo "$tmp" | grep -oE "$osVersionPattern" | head -1)
+    if command -v oslevel >/dev/null 2>&1; then systemOS="AIX"; systemVersion=$(oslevel -s);
+    elif echo "$tmp" | grep -qiF "raspberry"; then systemOS="Raspbian"; systemVersion=$(echo "$tmp" | sed -n 's/.*\([0-9]\{1,\}\.[0-9]\{1,\}\).*/\1/p' | head -1);
+    elif echo "$tmp" | grep -qiF "amzn2"; then systemOS="AML2"; systemVersion="2";
     else
-        declare -a osFiles=("/etc/os-release" "/etc/centos-release" "/etc/redhat-release" "/etc/SuSE-release")
-        for file in "${osFiles[@]}"; do
-            if [[ -f "$file" ]]; then
-                case "$file" in
-                    "/etc/os-release")
-                        systemVersion=$(grep "^VERSION_ID=" "$file" | cut -d'=' -f2 | tr -d '"')
-                        ;;
-                    "/etc/centos-release" | "/etc/redhat-release" | "/etc/SuSE-release")
-                        systemVersion=$(grep -oE "$osVersionPattern" "$file" | head -1)
-                        ;;
-                esac
-
-                if [[ -z "$systemOS" ]]; then
-                    if grep -qiF "ubuntu" "$file"; then systemOS="Ubuntu"
-                    elif grep -qiF "centos" "$file"; then systemOS="CentOS"
-                    elif grep -qiF "red" "$file"; then systemOS="RedHat"
-                    elif grep -qiF "suse" "$file"; then systemOS="SUSE"
-                    fi
+        for file in /etc/os-release /etc/centos-release /etc/redhat-release /etc/SuSE-release; do
+            if [ -f "$file" ]; then
+                if [ -z "$systemOS" ]; then
+                    if grep -qiF "ubuntu" "$file"; then systemOS="Ubuntu";
+                    elif grep -qiF "centos" "$file"; then systemOS="CentOS";
+                    elif grep -qiF "red" "$file"; then systemOS="RedHat";
+                    elif grep -qiF "suse" "$file"; then systemOS="SUSE";
+                    elif grep -qiF "amazon linux" "$file"; then systemOS="AML2";
+                    elif grep -qiF "aix" "$file"; then systemOS="AIX"; fi
                 fi
-
-                [[ -n "$systemOS" ]] && break
+                if [ -f "/etc/os-release" ]; then
+                    systemVersion=$(grep "^VERSION_ID=" "/etc/os-release" | cut -d'=' -f2 | tr -d '"')
+                else
+                    systemVersion=$(sed -n 's/.*\([0-9]\{1,\}\.[0-9]\{1,\}\(\.[0-9]\{1,\}\)*\).*/\1/p' "$file" | head -1)
+                fi
+                [ -n "$systemOS" ] && break
             fi
         done
     fi
 
-    # OS 또는 버전 정보가 없을 경우 에러 로깅
-    if [[ -z "$systemOS" || -z "$systemVersion" ]]; then
-        RecordLog Error "CheckOS: Unable to determine OS or version."
-        return
+    if [ -z "$systemOS" ] || [ -z "$systemVersion" ]; then
+        RecordLog Error "CheckOS: Could not determine OS or version."
+        ColorPrint red "Unsupported OS or OS information could not be determined."
+        exit 1
     fi
 
-    # 호스트 이름, MAC, IP 주소 수집
-    if ! command_exists hostname; then
-        RecordLog Error "CheckOS: hostname command not found."
+    systemHostName=$(hostname)
+    if [ "$systemOS" = "AIX" ]; then
+        systemHostMac=$(lsattr -El "$(lsdev -Cc adapter | grep -i ethernet | head -1 | awk '{print $1}')" 2>/dev/null | grep -i "network_address" | awk '{print $2}')
+        systemHostIp=$(ifconfig -a | grep -E 'inet ' | grep -v '127.0.0.1' | awk '{print $2}' | head -n1)
     else
-        systemHostName=$(hostname)
-        systemHostMac=$(ip link | grep -B1 "state UP" | awk '/ether/ {print $2}' | head -n1)
-        systemHostIp=$(hostname -I 2>/dev/null | awk '{print $1}')
-        [[ "$systemOS" == "SUSE" ]] && systemHostIp=$(ip a | grep -E 'inet ' | grep -v '127.0.0.1' | awk '{print $2}' | cut -d'/' -f1 | head -n1)
-    fi
-
-    RecordLog Success "CheckOS: System information collected successfully."
-}
-###############################################################################################################
-#6. 초기 환경 설정 함수
-# 수집 결과 폴더 생성 및 Config 파일 검증 수행
-# Create collection result folder and perform Config file verification
-# Usage: InitEnv 1
-# Args: 1(System Artifact), 2(3rd party Artifact)
-###############################################################################################################
-function InitEnv() {
-    local mode="$1"
-    local currentSection=""
-    local configFile=""
-    local line=""
-    local inOSBlock=false
-
-    # 저장 디렉토리 삭제 및 생성
-    rm -rf "$storePath"
-    mkdir "$storePath"
-
-    # 설정 파일 경로 설정 및 존재 여부 검증
-    scriptDir=$(cd "$(dirname "$0")" && pwd)
-    if [[ "$mode" -eq 1 ]]; then
-        configFile="$scriptDir/Config/${systemOS}.ini"
-    elif [[ "$mode" -eq 2 ]]; then
-        configFile="$scriptDir/Config/3rdParty.ini"
-    else
-        return 2
-    fi
-
-    if [[ ! -f "$configFile" ]]; then
-        return 3
-    fi
-
-    # 설정 파일 파싱 시작
-    while IFS= read -r line || [[ -n "$line" ]]; do
-        line=$(echo "$line" | tr -d '\r')  # CRLF를 LF로 변환
-
-        # 주석 또는 빈 줄 무시
-        if [[ "$line" =~ ^# ]] || [[ -z "$line" ]]; then
-            continue
+        systemHostMac=$(ip link 2>/dev/null | grep -A1 "state UP" | awk '/ether/ {print $2}' | head -n1)
+        if [ -z "$systemHostMac" ] && command_exists ifconfig; then
+            systemHostMac=$(ifconfig -a 2>/dev/null | awk '/ether|HWaddr/ {print $NF}' | head -n1)
         fi
-
-        # 섹션 이름 파싱
-        if [[ "$line" =~ ^\[.+\]$ ]]; then
-            currentSection=$(echo "$line" | sed 's/[\[\]]//g')  # 대괄호([]) 제거
-            inOSBlock=true
-            continue
-        fi
-
-        if [[ "$inOSBlock" == true ]]; then
-            IFS=',' read -ra components <<< "$line"
-            # 필요한 경우 추가 처리 (예: 공백 제거)
-
-            # Confirm that exactly five components exist per line
-            if [[ ${#components[@]} -ne 5 ]]; then
-                return 4
-            fi
-
-            for i in "${!components[@]}"; do
-                components[$i]=$(echo "${components[$i]}" | xargs)
-            done
-
-            local primaryCategory="${components[0]}"
-            local secondaryCategory="${components[1]}"
-
-            # NonVolatile 작업에 대한 폴더 생성
-            if [[ "$primaryCategory" == "NonVolatile" ]]; then
-                mkdir -p "$storePath/$primaryCategory"
-            else
-                mkdir -p "$storePath/$primaryCategory/$secondaryCategory"
-            fi
-
-            # 작업 목록에 추가
-            if [[ ${components[0]} == "Volatile" ]]; then
-              volatitleTasks+=("$(IFS=,; echo "${components[*]:0}")")
-            else
-              nonVolatitleTasks+=("$(IFS=,; echo "${components[*]:0}")")
-            fi
-        fi
-    done < "$configFile"
-
-    return 0
-}
-###############################################################################################################
-#7. 저장 공간 확인
-# Check storage space
-# Usage : calculate_size
-###############################################################################################################
-function CheckDriveSize() {
-    local total_size=0
-    local file_path=""
-    
-    # Iterate through nonVolatitleTasks array for file paths
-    for task in "${nonVolatitleTasks[@]}"; do
-        IFS=',' read -ra ADDR <<< "$task"
-        file_path="${ADDR[4]}"  # File path is the fifth column
         
-        # Calculate file size and add to total
-        if [ -f "$file_path" ]; then
-            file_size=$(stat -c %s "$file_path")
-            collectSize=$((collectSize + file_size))
+        systemHostIp=$(hostname -I 2>/dev/null | awk '{print $1}')
+        if [ -z "$systemHostIp" ]; then
+            if command_exists ip; then
+                 systemHostIp=$(ip a | grep -E 'inet ' | grep -v '127.0.0.1' | awk '{print $2}' | cut -d'/' -f1 | head -n1)
+            elif command_exists ifconfig; then
+                 systemHostIp=$(ifconfig -a 2>/dev/null | grep -E 'inet ' | grep -v '127.0.0.1' | awk '{print $2}' | head -n1)
+            fi
         fi
-    done
-    
-    # Check available space in the current partition
-    availableSize=$(df "$(pwd)" | awk 'NR==2 {print $4}')
-    availableSize=$((availableSize * 1024))  # Convert KB to Bytes
-    # Check if there is enough space
-    if [ $((collectSize * 2)) -lt $availableSize ]; then
-        return 1
-    else
-        return 2
     fi
+    RecordLog Success "CheckOS: System information collected. OS: $systemOS $systemVersion"
 }
-###############################################################################################################
-#8. 비밀번호 입력 및 검증
-# Usage : CheckPassword
-###############################################################################################################
-function CheckPassword() {
-  local password password2
-  local passwd_len=10
 
-  # 비밀번호 복잡성 및 일치성 검증
+# 환경 초기화 함수 / Environment Initialization Function
+InitEnv() {
+    mode="$1"
+    configFile=""
+    sanitized_config=""
+    line=""
+    rm -rf "$storePath"
+    if ! mkdir -p "$storePath"; then
+        ColorPrint red "Failed to create result directory: $storePath"
+        RecordLog Error "InitEnv: Failed to create result directory: $storePath"
+        exit 1
+    fi
+    scriptDir=$(cd "$(dirname "$0")" && pwd)
+    if [ "$mode" -eq 1 ]; then
+        configFile="$scriptDir/Config/${systemOS}.ini"
+    elif [ "$mode" -eq 2 ]; then
+        configFile="$scriptDir/Config/3rdParty.ini"
+    fi
+    if [ ! -f "$configFile" ]; then
+        RecordLog Error "InitEnv: Configuration file not found: $configFile"
+        ColorPrint red "Configuration file not found: $configFile"
+        exit 1
+    fi
+    sanitized_config="$tmpDir/config.sanitized.ini"
+    sed 's/\r$//' "$configFile" > "$sanitized_config"
+    RecordLog Info "InitEnv: Parsing sanitized configuration file: $sanitized_config"
+    while IFS= read -r line || [ -n "$line" ]; do
+        case "$line" in
+            \#* | "") continue ;;
+            \[*\]) continue ;;
+        esac
+        if [ "$(echo "$line" | tr -cd ',' | wc -c)" -ne 4 ]; then
+            RecordLog Error "InitEnv: Invalid config format (must have 5 fields): $line"
+            warning_count=$((warning_count + 1))
+            continue
+        fi
+        case "$line" in
+            Volatile,*)
+                if [ -z "$volatitleTasks" ]; then
+                    volatitleTasks="$line"
+                else
+                    volatitleTasks="$volatitleTasks
+$line"
+                fi
+                ;;
+            NonVolatile,*)
+                if [ -z "$nonVolatitleTasks" ]; then
+                    nonVolatitleTasks="$line"
+                else
+                    nonVolatitleTasks="$nonVolatitleTasks
+$line"
+                fi
+                ;;
+            *)
+                RecordLog Error "InitEnv: Unknown category in line: $line"
+                warning_count=$((warning_count + 1))
+                ;;
+        esac
+    done < "$sanitized_config"
+    RecordLog Success "InitEnv: Configuration file parsed successfully."
+}
+
+# 비밀번호 입력 및 검증 함수 / Password Input and Validation Function
+CheckPassword() {
+  password=""
+  password2=""
+  passwd_len=10
   while true; do
-    # 비밀번호 입력
-    read -r -s -p "Enter password (10 or more digits, including at least one letter, one number, and one special character): " password
-    echo
-    read -r -s -p "Re-enter password for verification: " password2
-    echo
-
-    # 비밀번호 일치 확인
-    if [[ "$password" != "$password2" ]]; then
-      echo -e "\033[31mPasswords do not match. Please try again.\033[0m"
+    printf "Enter password for the archive (10+ chars, with letter, number, special char): "
+    stty -echo; read password; stty echo; printf "\n"
+    printf "Re-enter password for verification: "
+    stty -echo; read password2; stty echo; printf "\n"
+    if [ "$password" != "$password2" ]; then
+      ColorPrint red "Passwords do not match. Please try again."
       continue
     fi
-
-    # 비밀번호 길이 검증
-    if [[ ${#password} -lt $passwd_len ]]; then
-      echo -e "\033[31mInput password must be at least $passwd_len characters long.\033[0m"
+    if [ "${#password}" -lt "$passwd_len" ]; then
+      ColorPrint red "Password must be at least $passwd_len characters long."
       continue
     fi
-
-    # 비밀번호 복잡성 검증
-    if ! [[ "$password" =~ [[:digit:]] ]] || ! [[ "$password" =~ [[:alpha:]] ]] || ! [[ "$password" =~ [[:punct:]] ]]; then
-      echo -e "\033[31mPassword must contain at least one letter, one number, and one special character.\033[0m"
+    if ! echo "$password" | grep -q '[[:digit:]]' || \
+       ! echo "$password" | grep -q '[[:alpha:]]' || \
+       ! echo "$password" | grep -q '[[:punct:]]'; then
+      ColorPrint red "Password must contain at least one letter, one number, and one special character."
       continue
     fi
-
-    # 비밀번호 검증 성공
     compPassword="$password"
     break
   done
 }
+
 ###############################################################################################################
-#9. 데이터 수집
+# 4. 데이터 수집 함수 / Data Collection Functions
 ###############################################################################################################
-#9.1 시스템 지원 명령어 여부 확인
-# 해당 운영체제에서 사용가능한 Command 인지 확인
-# Check whether the command is available in the operating system
-# Usage: command_exists $command
-###############################################################################################################
-function command_exists() {
-    type "$1" >/dev/null 2>&1
+
+# 명령어 존재 여부 확인 함수 / Command Existence Check Function
+command_exists() {
+    command -v "$1" >/dev/null 2>&1
 }
-###############################################################################################################
-#9.2 명렁어 데이터 수집
-# 명령어 출력 결과를 사전 정의된 파일로 저장
-# Save command output results to a predefined file
-# Usage : CollectCmd $command $destpath
-###############################################################################################################
-function CollectCmd() {
-  # 명령어를 괄호로 묶인 부분 제거 없이 직접 실행
-  local cmd="$1"
-  local dest="$2"
-  local final_dest=""
-  local ret=0
 
-  # Destination이 "/none"으로 끝나는 경우의 처리
-  if [[ "$(basename "$dest")" == "none" ]]; then
-    dest="${dest%/none}"
-    final_dest="${dest}/${cmd}"
-  else
-    final_dest="$dest"
-  fi
-
-  # 명령어의 첫 단어(실제 실행 파일)만을 사용하여 존재 여부 확인
-  local firstCmd=$(echo $cmd | awk '{print $1}')
-  if ! command_exists "$firstCmd"; then
-    RecordLog Error "CollectCmd: Command $firstCmd not found."
-    return 1
-  fi
-
-  # 명령어 실행 및 결과 리다이렉션
-  eval "$cmd" > "$final_dest" 2>/dev/null
-  ret=$?
-  if [ $ret -ne 0 ]; then
-    RecordLog Error "CollectCmd: Execution failed for command: $cmd."
-  else
-    RecordLog Success "CollectCmd: Command $cmd collected successfully."
-  fi
-
-  return $ret
-}
-###############################################################################################################
-#9.3 파일 데이터 수집
-# 파일을 복사하여 저장, 와일드카드의 경우 폴더를 생성하여 모두 복사
-# MetaData를 유지하여 복사
-# Copy and save the file, in case of wildcard, create a folder and copy all
-# Copy by maintaining MetaData
-# Usage : CollectFile $srcpath $destpath
-###############################################################################################################
-function CollectFile() {
-  local source_pattern="$1"
-  local dest="$2"
-  local ret=0
-
-  # Destination이 "/none"으로 끝나는 경우의 처리
-  local replace_none=false
-  if [[ "$(basename "$dest")" == "none" ]]; then
-    replace_none=true
-    dest="${dest%/none}"
-  fi
-
-  # Wildcard patterns 대응
-  shopt -s nullglob
-  local files_matched=($source_pattern)
-  shopt -u nullglob
-
-  for source in "${files_matched[@]}"; do
-    if [[ -f "$source" ]]; then
-      local final_dest=""
-      
-      # "/none"을 대체하는 로직
-      if [[ "$replace_none" == true ]]; then
-        final_dest="${dest}/$(dirname "${source#/home/}")"
-        mkdir -p "$final_dest"
-      else
+# 명령어 실행 결과 수집 함수 / Command Execution Result Collection Function
+CollectCmd() {
+    cmd="$1"
+    dest="$2"
+    cmd=$(echo "$cmd" | sed -e 's/^"//' -e 's/"$//')
+    if [ "$(basename "$dest")" = "none" ]; then
+        safe_filename=$(echo "$cmd" | tr -c 'a-zA-Z0-9_.-' '_')
+        final_dest="$(dirname "$dest")/${safe_filename}"
+    else
         final_dest="$dest"
-      fi
-
-      if cp --preserve=all "$source" "$final_dest" 2>/dev/null; then
-        sleep 0.2
-        RecordLog Success "CollectFile: $source is collected successfully."
-      else
-        RecordLog Error "CollectFile: An error occurred while collecting $source"
-      fi
-    else
-      RecordLog Error "CollectFile: File $source not found."
-      return 0
     fi
-  done
-
-  return $ret
-}
-###############################################################################################################
-#9.4 폴더 데이터 수집
-# 폴더를 복사하여 저장, 와일드카드의 경우 폴더를 생성하여 모두 복사
-# MetaData를 유지하여 복사
-# Copy and save the folder, in case of wildcard, create a folder and copy all
-# Copy by maintaining MetaData
-# Usage : CollectDir $srcpath $destpath
-###############################################################################################################
-function CollectDir() {
-  local source_pattern="$1"
-  local dest="$2"
-  local replace_none=false
-
-  # Destination이 "/none"으로 끝나는 경우의 처리
-  if [[ "$(basename "$dest")" == "none" ]]; then
-    replace_none=true
-    dest="${dest%/none}"
-  fi
-
-  # Wildcard patterns 대응
-  shopt -s nullglob
-  local dirs_matched=($source_pattern)
-  shopt -u nullglob
-
-  for source in "${dirs_matched[@]}"; do
-    if [[ -d "$source" ]]; then
-      local final_dest=""
-
-      # "/none"을 대체하는 로직
-      if [[ "$replace_none" == true ]]; then
-        final_dest="${dest}/$(dirname "${source#/home/}")"
-        mkdir -p "$final_dest"
-      else
-        final_dest="$dest"
-      fi
-
-      # rsync가 있는 경우와 없는 경우를 구분하여 처리
-      # if command -v rsync >/dev/null; then
-      #   rsync -avh --progress "$source/" "$final_dest" --exclude ".git" 2>&1 | while read line; do
-      #     echo $line
-      #   done
-      #   RecordLog Success "CollectDir: $source is collected successfully using rsync."
-      # else
-        cp -r --preserve=all "$source" "$final_dest" 2>/dev/null
-        if [ $? -eq 0 ]; then
-          RecordLog Success "CollectDir: $source is collected successfully using cp."
-        else
-          RecordLog Error "CollectDir: An error occurred while collecting $source using cp."
-          return 1
-        fi
-      # fi
-    else
-      RecordLog Error "CollectDir: Directory $source not found."
-      return 0 # 에러 없음으로 처리
-    fi
-  done
-
-  return 0 # 모든 디렉터리 처리 후 성공
-}
-###############################################################################################################
-#9.5 프로세스 데이터 수집
-# /proc/{exe}/ 데이터 수집
-# 악성 프로세스 식별 및 분석 용도
-# /proc/{exe}/ Data collection
-# For malicious process identification and analysis purposes
-###############################################################################################################
-function CollectProc() {
-    local source="$1"
-    local dest="$2"
-    local final_dest=""
-
-    # Destination이 "/none"으로 끝나는 경우의 처리
-    if [[ "$(basename "$dest")" == "none" ]]; then
-      final_dest="${dest%/none}/$(source)"
-    else
-      final_dest="$dest"
-    fi
-
-    # 필요한 도구가 있는지 확인
-    if ! command -v stat &>/dev/null || ! command -v readlink &>/dev/null; then
-        RecordLog Error "CollectProc: Required commands (stat or readlink) not found."
+    firstCmd=$(echo "$cmd" | awk '{print $1}')
+    if ! command_exists "$firstCmd"; then
+        RecordLog Error "CollectCmd: Command not found: $firstCmd"
+        error_count=$((error_count + 1))
         return 1
     fi
-
-    # 실행 가능한 파일의 리스트를 생성
-    local exec_files=()
-    while read -r pid; do
-        local exe_link="/proc/${pid}/exe"
-        local target
-        if target=$(readlink -f "$exe_link" 2>/dev/null); then
-            [[ -n "$target" && -e "$target" ]] && exec_files+=("$target")
-        fi
-    done < <(ps -e -o pid=)
-
-    # 중복을 제거하고 결과를 파일에 저장
-    printf "%s\n" "${exec_files[@]}" | sort | uniq | tar -P -zcf "${final_dest}.tar.gz" -T - && \
-    RecordLog Success "CollectProc: Compression of ${final_dest} was successfully." || \
-    RecordLog Error "CollectProc: An error occurred in ${final_dest} compression."
-}
-
-###############################################################################################################
-#9.6 데이터 수집 함수
-# config.ini 데이터를 읽어 알맞는 함수에 인자 전달
-# Read config.ini data and pass arguments to the appropriate function
-# Usage : CollectData
-###############################################################################################################
-function CollectData() {
-  RecordLog Info "Start CollectData"
-  # destination path는 dir 경로로 전달되어야함.
-  ColorPrint blue "CollectData: Start collecting $systemOS system data"
-  RecordLog Info "CollectData: [SystemOS] $systemOS"
-  RecordLog Info "CollectData: [SystemVersion] $systemVersion"
-  RecordLog Info "CollectData: [HostName] $systemHostName"
-  RecordLog Info "CollectData: [IP Address] $systemHostIp"
-  RecordLog Info "CollectData: [Mac Address] $systemHostMac"
-
-  local total_tasks=$(( ${#volatitleTasks[@]} + ${#nonVolatitleTasks[@]} ))
-  local current_task=0
-
-  # 모든 작업을 하나의 배열로 병합
-  all_tasks=("${volatitleTasks[@]}" "${nonVolatitleTasks[@]}")
-
-  # task_types 배열 생성
-  local task_types=()
-  for i in $(seq 1 ${#volatitleTasks[@]}); do
-      task_types+=("Volatile")
-  done
-  for i in $(seq 1 ${#nonVolatitleTasks[@]}); do
-      task_types+=("NonVolatile")
-  done
-
-  # 모든 작업을 순회
-  for index in "${!all_tasks[@]}"; do
-      IFS=',' read -ra components <<< "${all_tasks[$index]}"
-      local action="${components[3]}"
-      local data=$(echo "${components[4]}" | tr -d '\n\r')
-      local currentPath=$(pwd)
-      local destPath="$currentPath/$storePath/${components[0]}/${components[1]}/${components[2]}"
-      PrintProgressBar $(( (index * 100) / ${#all_tasks[@]} )) "${components[0]} data collection through ${data}"
-      case $action in
-          cmd)
-              RecordLog Info "Start CollectCmd for $data"
-              CollectCmd "$data" "$destPath"
-              RecordLog Info "End CollectCmd"
-              ;;
-          file)
-              RecordLog Info "Start CollectFile for $data"
-              CollectFile "$data" "$destPath"
-              RecordLog Info "End CollectFile"
-              ;;
-          dir)
-              RecordLog Info "Start CollectDir for $data"
-              CollectDir "$data" "$destPath"
-              RecordLog Info "End CollectDir"
-              ;;
-          function)
-              RecordLog Info "Start UserFunction for $data"
-              $data "$data" "$destPath"
-              RecordLog Info "End $data"
-              ;;
-          *)
-              ;;
-      esac
-      ((current_task++))
-  done
-  RecordLog Info "End CollectData"
-}
-###############################################################################################################
-###############################################################################################################
-#10. 압축 함수
-# 스크립트 파일 실행 경로에 생성된 Result/ 폴더를 압축
-# zip 명령을 지원할 경우, password를 포함하여 zip으로 압축 및 무결성 검사 수행
-# zip 명령이 없을 경우, tar 명렁어를 활용해 password 없이 압축 진행
-# Compress the Result/ folder created in the script file execution path.
-# If the zip command is supported, perform compression and integrity checking with zip, including password.
-# If there is no zip command, use the tar command to compress without password
-# Usage : CompData
-###############################################################################################################
-function CompData() {
-  # $1(password check result)
-  RecordLog Info "Start CompData"
-  ColorPrint blue "Compressing Collected Informations."
-
-  case "$1" in
-    0)
-      if command_exists zip; then
-        zip -P "$compPassword" -r -q "$resultFile.zip" "./$storePath" 2>/dev/null
-        ColorPrint blue "Compression is successfully."
-        ColorPrint blue "Compression Integrity Checking..."
-        OUTPUT=$(unzip -tP "$compPassword" "$resultFile.zip" 2>&1)
-        # 압축파일 무결성 검사
-        if echo "$OUTPUT" | grep -q "No errors detected"; then
-            ColorPrint blue "Compression Integrity check is Successfully."
-            RecordLog Success "CompData: Compression Integrity check is Successfully."
-            zip -r -P "$compPassword" "$resultFile.zip" "$collectLog" 2>/dev/null
-            SHA256=$(sha256sum "$resultFile.zip" | cut -d ' ' -f1)
-            ColorPrint blue "SHA256: $SHA256"
-            RecordLog Info "SHA256 of compressed file: $SHA256"
+    if ! mkdir -p "$(dirname "$final_dest")"; then
+        RecordLog Error "CollectCmd: Failed to create directory for $final_dest"
+        error_count=$((error_count + 1))
+        return 1
+    fi
+    RecordLog Info "CollectCmd: Executing: $cmd -> $final_dest"
+    if eval "$cmd" > "$final_dest" 2>"$tmpDir/stderr.log"; then
+        if [ -s "$final_dest" ]; then
+            RecordLog Success "CollectCmd: '$cmd' collected successfully."
+            success_count=$((success_count + 1))
         else
-            ColorPrint red "Integrity check error : $OUTPUT" | grep "error:"  # 오류가 발생한 파일을 출력합니다.
-            RecordLog Error "CompData: The integrity check of the $OUTPUT file failed."
+            RecordLog Warning "CollectCmd: Command '$cmd' executed but the output was empty."
+            warning_count=$((warning_count + 1))
         fi
-      else
-        # CollectDir error ($source not exist)
-        tar -zcf "$resultFile.tar.gz" "./$storePath" "$collectLog" 2>/dev/null
-        ColorPrint blue "Compression was successfully."
-        SHA256=$(sha256sum "$resultFile.tar.gz" | cut -d ' ' -f1)
-        ColorPrint blue "SHA256: $SHA256"
-        RecordLog Info "SHA256 of compressed file: $SHA256"
-      fi
-      ;;
-    255) # User pressed escape
-      ColorPrint red "No Compression."
-      ;;
-    *) # Any other error
-      RecordLog Error "CompData: An unknown error occurred during compression."
-      ColorPrint red "CompData: An unknown error occurred during compression."
-      ;;
-  esac
-  RecordLog Info "End CompData"
+    else
+        ret=$?
+        stderr_output=$(cat "$tmpDir/stderr.log")
+        RecordLog Error "CollectCmd: Execution failed for '$cmd' (Exit: $ret). Error: $stderr_output"
+        error_count=$((error_count + 1))
+        return 1
+    fi
+    return 0
+}
+
+# 파일 복사 수집 함수 / File Copy Collection Function
+CollectFile() {
+    source_pattern="$1"
+    dest="$2"
+    ls -d $source_pattern 2>/dev/null | while IFS= read -r source; do
+        if [ ! -f "$source" ]; then continue; fi
+        final_dest="$dest"
+        if [ "$(basename "$dest")" = "none" ]; then
+            final_dest="$(dirname "$dest")/$(basename "$source")"
+        fi
+        if ! mkdir -p "$(dirname "$final_dest")"; then
+            RecordLog Error "CollectFile: Failed to create directory for $final_dest"
+            error_count=$((error_count + 1))
+            continue
+        fi
+        RecordLog Info "CollectFile: Copying: $source -> $final_dest"
+        if cp -p "$source" "$final_dest" 2>/dev/null; then
+            RecordLog Success "CollectFile: '$source' collected successfully."
+            success_count=$((success_count + 1))
+        else
+            RecordLog Error "CollectFile: Failed to copy '$source'."
+            error_count=$((error_count + 1))
+        fi
+    done
+}
+
+# 디렉토리 복사 수집 함수 / Directory Copy Collection Function
+CollectDir() {
+    source_pattern="$1"
+    dest="$2"
+    ls -d $source_pattern 2>/dev/null | while IFS= read -r source; do
+        if [ ! -d "$source" ]; then continue; fi
+        final_dest="$dest"
+        if [ "$(basename "$dest")" = "none" ]; then
+            final_dest="$(dirname "$dest")/$(basename "$source")"
+        fi
+        if ! mkdir -p "$final_dest"; then
+            RecordLog Error "CollectDir: Failed to create directory $final_dest"
+            error_count=$((error_count + 1))
+            continue
+        fi
+        RecordLog Info "CollectDir: Copying: $source -> $final_dest"
+        if command_exists rsync; then
+            if rsync -a "$source/" "$final_dest" --exclude ".git" >/dev/null 2>&1; then
+                RecordLog Success "CollectDir: '$source' (rsync) collected successfully."
+                success_count=$((success_count + 1))
+            else
+                RecordLog Error "CollectDir: Failed to copy '$source' using rsync."
+                error_count=$((error_count + 1))
+            fi
+        else
+            if cp -rp "$source/." "$final_dest" 2>/dev/null; then
+                RecordLog Success "CollectDir: '$source' (cp) collected successfully."
+                success_count=$((success_count + 1))
+            else
+                RecordLog Error "CollectDir: Failed to copy '$source' using cp."
+                error_count=$((error_count + 1))
+            fi
+        fi
+    done
+}
+
+# 프로세스 실행 파일 수집 함수 / Process Executable Collection Function
+CollectProc() {
+    dest="$2"
+    final_dest="${dest%/none}/process_dump"
+    if ! command_exists readlink; then
+        RecordLog Error "CollectProc: 'readlink' command not found, skipping process dump."
+        error_count=$((error_count + 1))
+        return 1
+    fi
+    RecordLog Info "CollectProc: Collecting executable files of running processes..."
+    ps -eo pid= | while read -r pid; do
+        exe_path=$(readlink -f "/proc/${pid}/exe" 2>/dev/null || true)
+        if [ -n "$exe_path" ] && [ -e "$exe_path" ]; then
+            echo "$exe_path"
+        fi
+    done | sort | uniq > "$tmpDir/proc_list.txt"
+    if [ -s "$tmpDir/proc_list.txt" ]; then
+        if tar -P -zcf "${final_dest}.tar.gz" -T "$tmpDir/proc_list.txt" >/dev/null 2>&1; then
+            RecordLog Success "CollectProc: Process executables compressed successfully."
+            success_count=$((success_count + 1))
+        else
+            RecordLog Error "CollectProc: Failed to compress process executables."
+            error_count=$((error_count + 1))
+        fi
+    else
+        RecordLog Warning "CollectProc: No process executables found to collect."
+        warning_count=$((warning_count + 1))
+    fi
 }
 
 ###############################################################################################################
-#11. 환경 초기화 함수
-# 수집 폴더 및 전역 변수 메모리 할당 해제
-# Deallocate collection folder and global variable memory
+# 5. 메인 로직 함수 / Main Logic Functions
 ###############################################################################################################
-function CleanEnv(){
-    # Result 디렉토리 삭제
+
+# 데이터 수집 메인 함수 / Main Data Collection Function
+CollectData() {
+    RecordLog Info "========== Data Collection Start =========="
+    ColorPrint blue "Starting data collection for [$systemOS] system."
+    
+    total_tasks=0
+    [ -n "$volatitleTasks" ] && total_tasks=$((total_tasks + $(echo "$volatitleTasks" | wc -l)))
+    [ -n "$nonVolatitleTasks" ] && total_tasks=$((total_tasks + $(echo "$nonVolatitleTasks" | wc -l)))
+    
+    RecordLog Info "Total tasks to collect: $total_tasks"
+
+    current_task_count=0
+    if [ -n "$volatitleTasks" ]; then
+        RecordLog Info "--- Collecting Volatile Data ---"
+        printf "%s\n" "$volatitleTasks" > "$tmpDir/volatile_tasks.txt"
+        
+        while IFS= read -r line; do
+            current_task_count=$((current_task_count + 1))
+            
+            line_remainder="$line"
+            field1=$(echo "$line_remainder" | cut -d',' -f1)
+            line_remainder=$(echo "$line_remainder" | cut -d',' -f2-)
+            field2=$(echo "$line_remainder" | cut -d',' -f1)
+            line_remainder=$(echo "$line_remainder" | cut -d',' -f2-)
+            field3=$(echo "$line_remainder" | cut -d',' -f1)
+            line_remainder=$(echo "$line_remainder" | cut -d',' -f2-)
+            action=$(echo "$line_remainder" | cut -d',' -f1)
+            data=$(echo "$line_remainder" | cut -d',' -f2-)
+            
+            field1=$(echo "$field1" | xargs)
+            field2=$(echo "$field2" | xargs)
+            field3=$(echo "$field3" | xargs)
+            action=$(echo "$action" | xargs)
+            data=$(echo "$data" | sed -e 's/^[[:space:]]*//')
+
+            progress_message=""
+            case "$action" in
+                cmd)      progress_message="[$field1/$field2] Executing: $data" ;;
+                file)     progress_message="[$field1/$field2] Copying file: $data" ;;
+                dir)      progress_message="[$field1/$field2] Copying dir: $data" ;;
+                function) progress_message="[$field1/$field2] Running function: $data" ;;
+            esac
+
+            percent=0
+            if [ "$total_tasks" -gt 0 ]; then
+                percent=$(( (current_task_count * 100) / total_tasks ))
+            fi
+            PrintProgressBar "$percent" "$progress_message"
+
+            case "$action" in
+                cmd)      CollectCmd "$data" "$storePath/$field1/$field2/$field3" ;;
+                file)     CollectFile "$data" "$storePath/$field1/$field2/$field3" ;;
+                dir)      CollectDir "$data" "$storePath/$field1/$field2/$field3" ;;
+                function) "$data" "$data" "$storePath/$field1/$field2/$field3" ;;
+                *)
+                    RecordLog Error "Unknown action: '$action' in line: $line"
+                    error_count=$((error_count + 1))
+                    ;;
+            esac
+        done < "$tmpDir/volatile_tasks.txt"
+    fi
+    
+    if [ -n "$nonVolatitleTasks" ]; then
+        RecordLog Info "--- Collecting Non-Volatile Data ---"
+        printf "%s\n" "$nonVolatitleTasks" > "$tmpDir/nonvolatile_tasks.txt"
+        
+        while IFS= read -r line; do
+            current_task_count=$((current_task_count + 1))
+
+            line_remainder="$line"
+            field1=$(echo "$line_remainder" | cut -d',' -f1)
+            line_remainder=$(echo "$line_remainder" | cut -d',' -f2-)
+            field2=$(echo "$line_remainder" | cut -d',' -f1)
+            line_remainder=$(echo "$line_remainder" | cut -d',' -f2-)
+            field3=$(echo "$line_remainder" | cut -d',' -f1)
+            line_remainder=$(echo "$line_remainder" | cut -d',' -f2-)
+            action=$(echo "$line_remainder" | cut -d',' -f1)
+            data=$(echo "$line_remainder" | cut -d',' -f2-)
+
+            field1=$(echo "$field1" | xargs)
+            field2=$(echo "$field2" | xargs)
+            field3=$(echo "$field3" | xargs)
+            action=$(echo "$action" | xargs)
+            data=$(echo "$data" | sed -e 's/^[[:space:]]*//')
+
+            progress_message=""
+            case "$action" in
+                cmd)      progress_message="[$field1/$field2] Executing: $data" ;;
+                file)     progress_message="[$field1/$field2] Copying file: $data" ;;
+                dir)      progress_message="[$field1/$field2] Copying dir: $data" ;;
+                function) progress_message="[$field1/$field2] Running function: $data" ;;
+            esac
+
+            percent=0
+            if [ "$total_tasks" -gt 0 ]; then
+                percent=$(( (current_task_count * 100) / total_tasks ))
+            fi
+            PrintProgressBar "$percent" "$progress_message"
+
+            case "$action" in
+                cmd)      CollectCmd "$data" "$storePath/$field1/$field2/$field3" ;;
+                file)     CollectFile "$data" "$storePath/$field1/$field2/$field3" ;;
+                dir)      CollectDir "$data" "$storePath/$field1/$field2/$field3" ;;
+                function) "$data" "$data" "$storePath/$field1/$field2/$field3" ;;
+                *)
+                    RecordLog Error "Unknown action: '$action' in line: $line"
+                    error_count=$((error_count + 1))
+                    ;;
+            esac
+        done < "$tmpDir/nonvolatile_tasks.txt"
+    fi
+    
+    RecordLog Info "========== Data Collection Finished =========="
+}
+
+# 데이터 압축 함수 / Data Compression Function
+CompData() {
+    zip_is_available="$1" 
+
+    RecordLog Info "========== Compression Start =========="
+    ColorPrint blue "Compressing collected information."
+
+    if [ "$zip_is_available" -eq 1 ]; then
+        zip -P "$compPassword" -r -q "$resultFile.zip" "./$storePath" "$collectLog" >/dev/null 2>&1
+        ColorPrint green "Compression complete: $resultFile.zip"
+        ColorPrint blue "Verifying archive integrity..."
+        
+        if unzip -tP "$compPassword" "$resultFile.zip" >/dev/null 2>&1; then
+            ColorPrint green "Integrity check successful."
+            RecordLog Success "CompData: Archive integrity check successful."
+            
+            if command_exists sha256sum; then
+                sha256=$(sha256sum "$resultFile.zip" | awk '{print $1}')
+                ColorPrint blue "SHA256: $sha256"
+                RecordLog Info "Archive SHA256: $sha256"
+            else
+                ColorPrint yellow "sha256sum command not found. Skipping hash calculation."
+                RecordLog Warning "CompData: sha256sum not found. Hash calculation skipped."
+            fi
+        else
+            ColorPrint red "Integrity check failed! The archive may be corrupted."
+            RecordLog Error "CompData: Archive integrity check failed."
+            error_count=$((error_count + 1))
+        fi
+    else
+        tar -cf "$resultFile.tar" "$storePath" "$collectLog" >/dev/null 2>&1
+        ColorPrint green "Compression complete (tar, no password): $resultFile.tar"
+        
+        if command_exists sha256sum; then
+            sha256=$(sha256sum "$resultFile.tar" | awk '{print $1}')
+            ColorPrint blue "SHA256: $sha256"
+            RecordLog Info "Archive SHA256: $sha256"
+        else
+            ColorPrint yellow "sha256sum command not found. Skipping hash calculation."
+            RecordLog Warning "CompData: sha256sum not found. Hash calculation skipped."
+        fi
+    fi
+    RecordLog Info "========== Compression Finished =========="
+}
+
+# 환경 정리 함수 / Environment Cleanup Function
+CleanEnv(){
     rm -rf "$storePath"
-    rm -rf "$collectLog"
-
-    # 전역 변수 해제
-    unset systemOS
-    unset systemVersion
-    unset systemHostName
-    unset systemHostIp
-    unset systemHostMac
-    unset storePath
-    unset collectLog
-    unset systemDate
-    unset resultFile
-    unset volatitleTasks
-    unset nonVolatitleTasks
-    unset compPassword
-    unset collectSize
-    unset availableSize
+    RecordLog Info "CleanEnv: Result directory ($storePath) has been removed."
 }
-###############################################################################################################
-#12. 진행률 표시 함수
-# (현재 작업 / 총 작업)에 따라 출력
-# output based on (current tasks/total tasks)
-# Usage : PrintProgressBar $1(percent value) $2(current processing task name)
-###############################################################################################################
-function PrintProgressBar() {
-  clear
-  # $1(percent value) $2(current processing task name)
-  Current_Progress=${Current_Progress:-0}
-  Param_Progress=${Param_Progress:-0}
-  Param_Progress=$1
-  Phase=$2
-  tmp=$Ignore_echo
-  Ignore_echo=0
 
-  # Progress bar 업데이트
-  local progress_bar="["
-  local total_dots=50
-  local filled_dots=$(($Param_Progress * total_dots / 100))
-  local remaining_dots=$(($total_dots - filled_dots))
-
-  for ((i=0; i<filled_dots; i++)); do
-    progress_bar+="#"
-  done
-  for ((i=0; i<remaining_dots; i++)); do
-    progress_bar+="."
-  done
-  progress_bar+="]"
-
-  if [[ $Ignore_echo -eq 1 ]]; then
-    return
-  fi
-  text="${progress_bar} ($Param_Progress%) $Phase \r"
-  # green
-  echo_logo
-  echo -ne "\033[1;32m${text}\033[0m"
-  sleep 0.2
-
-  echo -ne '\n'
-
-  Ignore_echo=$tmp
-  Current_Progress=$Param_Progress
-
-  unset Phase
-  unset Param_Progress
-  unset tmp
-}
-###############################################################################################################
-#13. Bash버전 확인
-# 조건: Bash >= 3.2
-# Condition: Bash >= 3.2
-# Usage : CheckBash
-###############################################################################################################
-function CheckBash() {
-    local major=$(echo "$BASH_VERSION" | cut -d'.' -f1)
-    local minor=$(echo "$BASH_VERSION" | cut -d'.' -f2)
-
-    # Bash 3.2 이상인지 확인합니다.
-    if ((major >= 3 && minor >= 2)) || ((major > 3)); then
-        return 1
-    else
-        return 2
-    fi
-}
-###############################################################################################################
-#14. 메인 함수
-###############################################################################################################
-function main()
-{
-  echo_logo
-  # Ctrl+c, Ctrl+z, Ctrl+\ 사용 제한
-  #trap '' SIGINT SIGTSTP SIGQUIT
-  local messages=""
-  # 수집 에러로그 파일 삭제
-  rm -rf "$collectLog"
-
-  # 루트 권한 확인
-  CheckPermission
-
-  # 시스템 정보 확인
-  CheckOS
-  local ret=$?
-  # 지원하지 않는 OS일 경우
-  if [ "$ret" -eq 2 ]; then
-    messages="CheckOS: This system is not supported."
-    RecordLog Error "$messages"
-    ColorPrint red "$messages"
-    CleanEnv
-    exit 1
-  fi
-
-  # Bash 버전이 3.2 이상인가?
-  CheckBash
-  ret=$?
-  # 3.2 미만일 경우
-  if [ "$ret" -eq 2 ]; then
-    messages="Incompatible Bash version: $BASH_VERSION. This script requires Bash 3.2 or higher."
-    RecordLog Error "$messages"
-    ColorPrint red "$messages"
-    CleanEnv
-    exit 1
-  fi
-
-  # 사용자 입력을 통한 InitEnv 호출
-  echo -e "\e[92m     1. Collect system artifacts\e[0m\n"
-  echo -e "\e[92m     2. Collect 3rd-party application artifacts\e[0m\n"
-  read -r -p "     Please select an option (1 or 2): " userChoice
-
-  case $userChoice in
-    1|2)
-      InitEnv "$userChoice"
-      ;;
-    *)
-      ColorPrint red "Invalid option selected."
-      exit 1
-      ;;
-  esac
-  ret=$?
+# 진행률 표시 바 함수 / Progress Bar Display Function
+PrintProgressBar() {
+  percent="$1"
+  phase="$2"
   
-  # 파일이 없는 경우
-  if [ "$ret" -eq 3 ]; then
-    messages="InitEnv: Config File does not exist."
-    RecordLog Error "$messages"
-    ColorPrint red "$messages"
-    CleanEnv
-    exit 1
-  # 설정 파일에 필요 인자가 부족한 경우
-  elif [ "$ret" -eq 4 ]; then
-    messages="InitEnv: Config File validation failed. Each line must have 5 fields."
-    RecordLog Error "$messages"
-    ColorPrint red "$messages"
-    CleanEnv
-    exit 1
-  else
-    messages="InitEnv: Config File verification is successfully."
-    RecordLog Success "$messages"
-    ColorPrint green "$messages"
-  fi
-  sleep 3
-
-  # 수집 대상 파일이 저장될 공간이 충분한지 확인
-  CheckDriveSize
-  ret=$?
-  if [ "$ret" -eq 2 ]; then
-    messages="CheckDriveSize: currently insufficient space on the drive to store the collection data. / Collection data size: $collectSize, free space: $availableSize"
-    RecordLog Error "$messages"
-    ColorPrint red "$messages"
-    CleanEnv
-    exit 1
-  fi
-
-  sleep 3
-  clear
-  CollectData
-  clear
-  # 패스워드 인자는 임의로 0000으로 처리, 필요한 경우 아래 주석 해제
-
-  systemDate=$(date '+%Y-%m-%d')
-  if [ "$userChoice" == "1" ]; then
-    resultFile="${systemDate}_${systemOS}_${systemHostName}_${systemHostIp}"
-  else
-    resultFile="${systemDate}_${systemOS}_${systemHostName}_${systemHostIp}_3rdParty"
-  fi
-
-  CheckPassword
-  ret=$?
-  CompData "$ret"
-
-  messages="End collecting $systemOS system data !!!"
-  RecordLog Info "$messages"
-  ColorPrint green "$messages"
-
-  CleanEnv
-
-  trap - SIGINT SIGTSTP SIGQUIT
+  progress_bar="["
+  total_dots=40
+  filled_dots=$((percent * total_dots / 100))ㄷㄷㄷㄷㄷㄷㄷㄷㄷ
+  
+  i=0
+  while [ $i -lt $filled_dots ]; do
+    progress_bar="$progress_bar="
+    i=$((i + 1))
+  done
+  [ $percent -ne 100 ] && progress_bar="${progress_bar}>" || progress_bar="${progress_bar}="
+  
+  i=$((i + 1))
+  while [ $i -le $total_dots ]; do
+    progress_bar="$progress_bar "
+    i=$((i + 1))
+  done
+  progress_bar="$progress_bar]"
+  
+  printf "\033c"
+  echo_logo
+  printf "\033[1;32m%s (%d%%)\033[0m\n%s\n" "$progress_bar" "$percent" "$phase"
 }
+
+# 결과 요약 출력 함수 / Result Summary Display Function
+PrintSummary() {
+    printf "\n"
+    ColorPrint blue "================== Collection Summary =================="
+    ColorPrint green "  Success: $success_count"
+    ColorPrint yellow "  Warnings: $warning_count"
+    ColorPrint red "  Failures: $error_count"
+    ColorPrint blue "======================================================"
+    
+    RecordLog Info "========== Collection Summary =========="
+    RecordLog Info "Success: $success_count, Warnings: $warning_count, Failures: $error_count"
+    RecordLog Info "========================================"
+
+    if [ "$error_count" -gt 0 ]; then
+        printf "\n"
+        ColorPrint red "There were $error_count errors during collection."
+        ColorPrint red "Please check 'collect.log' for details and perform manual collection for the failed items."
+    fi
+    printf "\n"
+}
+
 ###############################################################################################################
-## 프로그램 시작 부
+# 6. 메인 함수 / Main Function
 ###############################################################################################################
+main() {
+    trap Cleanup EXIT
+    
+    if command_exists mktemp; then
+        tmpDir=$(mktemp -d "/tmp/bitcollector.XXXXXX")
+    else
+        tmpDir="/tmp/bitcollector.$$"
+        if [ -e "$tmpDir" ]; then
+            echo "[ERROR] Temporary path '$tmpDir' already exists. Aborting."
+            exit 1
+        fi
+        mkdir "$tmpDir"
+    fi
+
+    zip_is_available=0
+    if command_exists zip; then
+        zip_is_available=1
+    fi
+
+    rm -f "$collectLog"
+    RecordLog Info "========== BitCollector Script Start (PID: $$) =========="
+
+    echo_logo
+    CheckPermission
+    CheckOS
+
+    printf "\033[92m     1. Collect system artifacts\033[0m\n"
+    printf "\033[92m     2. Collect 3rd-party application artifacts\033[0m\n\n"
+    printf "     Select an option to collect (1 or 2): "
+    read -r userChoice
+
+    case "$userChoice" in
+        1|2) InitEnv "$userChoice" ;;
+        *) ColorPrint red "Invalid option selected."; exit 1 ;;
+    esac
+
+    CollectData
+    PrintProgressBar 100 "Collection complete. Preparing for compression."
+    sleep 1
+    
+    PrintSummary
+
+    systemDate=$(date '+%Y-%m-%d')
+    if [ "$userChoice" = "1" ]; then
+        resultFile="${systemDate}_${systemOS}_${systemHostName}_${systemHostIp}"
+    else
+        resultFile="${systemDate}_${systemOS}_${systemHostName}_${systemHostIp}_3rdParty"
+    fi
+
+    if [ "$zip_is_available" -eq 1 ]; then
+        CheckPassword
+    else
+        ColorPrint yellow "zip command not found. The result will be compressed using tar.gz without a password."
+        RecordLog Warning "Main: zip command not found, skipping password prompt."
+    fi
+    
+    CompData "$zip_is_available"
+    
+    CleanEnv
+    
+    ColorPrint green "All collection procedures are complete!"
+    RecordLog Info "========== BitCollector Script Finished =========="
+}
+
+#==============================================================================================================
+# 프로그램 시작 / Program Start
+#==============================================================================================================
 main
