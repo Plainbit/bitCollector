@@ -1,5 +1,5 @@
 <div align="center">
-    <img src="https://github.com/Plainbit/bitColletor/raw/main/img/Logo.png" />
+    <img src="https://github.com/Plainbit/bitCollector/blob/v2.0.0/img/Logo.png" />
 </div>
 
 <div align="center">
@@ -14,7 +14,7 @@ bitCollector for Windows is a detailed artifact collection tool crafted for digi
 
 ### bitCollector for Windows: GUI
 <p align="center">
-  <img width="70%" height="70%" src="https://github.com/Plainbit/bitColletor/raw/main/img/Bitcollector-gui.png">
+  <img width="70%" height="70%" src="https://github.com/Plainbit/bitCollector/blob/v2.0.0/img/Bitcollector-gui.png">
 </p>
 
 ## Features
